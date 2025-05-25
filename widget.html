@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bible Q&A Widget</title>
+<style>
+body{margin:0;text-align:center;font:16px Georgia,serif}
+#q{width:60%;max-width:600px;padding:20px 12px;border:1px solid #000;border-radius:5px}
+button{padding:10px 22px;margin-left:8px;background:#000;color:#fff;font-weight:bold;border:none;border-radius:5px;cursor:pointer}
+#ans{max-width:800px;margin:40px auto 0;font-size:18px;line-height:1.55;text-align:left}
+</style>
+
+<input id="q" placeholder="Ask a question about life, morality, or faith.">
+<button onclick="askBible()">Ask&nbsp;the&nbsp;Bible</button>
+<div id="ans"></div>
+
+<script>
+const endpointURL="https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
+async function askBible(){
+  const box=document.getElementById('ans');
+  const question=document.getElementById('q').value.trim();
+  if(!question)return;
+  box.innerHTML='<em>Processing…</em>';
+  try{
+    const r=await fetch(`${endpointURL}?question=${encodeURIComponent(question)}`);
+    box.innerHTML=await r.text();
+  }catch{
+    box.innerHTML='<span style="color:red">Error contacting server.</span>';
+  }
+}
+</script>
