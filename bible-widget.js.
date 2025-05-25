@@ -1,0 +1,17 @@
+/* Bible Q&A widget – external script */
+const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
+
+window.askBible = async function () {
+  const box      = document.getElementById('ans');
+  const question = document.getElementById('q')?.value.trim();
+  if (!question) return;
+  box.innerHTML = '<em>Processing…</em>';
+
+  try {
+    const r = await fetch(`${endpointURL}?question=${encodeURIComponent(question)}`);
+    const answerHTML = await r.text();
+    box.innerHTML = answerHTML;
+  } catch {
+    box.innerHTML = '<span style="color:red">Error contacting server.</span>';
+  }
+};
