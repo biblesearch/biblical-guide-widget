@@ -47,7 +47,7 @@
 <div id="ans"></div>
 
 <script>
-  const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
+  const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe"; // <-- Use your actual Make URL
 
   async function askBible() {
     const box = document.getElementById('ans');
@@ -60,38 +60,37 @@
     let history = sessionStorage.getItem('chatHistory');
     history = history ? JSON.parse(history) : [];
 
-    // Add user question
+    // Add user's question to history
     history.push({ role: "user", content: question });
 
     try {
-      // Send entire conversation history to backend
-      const r = await fetch(endpointURL, {
+      const response = await fetch(endpointURL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ history })
       });
 
-      if (!r.ok) throw new Error("Server error");
+      if (!response.ok) throw new Error("Server error");
 
-      const answerHTML = await r.text();
+      const answerText = await response.text();
 
-      // Show formatted response
-      const [summary, ...verses] = answerHTML.split(/\n|<br\s*\/?>/).filter(Boolean);
+      // Split into summary and verses
+      const [summary, ...verses] = answerText.split(/\n|<br\s*\/?>/).filter(Boolean);
+
       box.innerHTML = `
         <p style="font-style: italic; font-weight: bold;">${summary.trim()}</p>
         ${verses.map(v =>
-          `<p style="margin: 4px 0; font-style: normal; font-weight: normal;">${v.trim()}</p>`
+          `<p style="margin: 4px 0;">${v.trim()}</p>`
         ).join('')}
       `;
 
-      // Add assistant's reply to history
-      history.push({ role: "assistant", content: answerHTML });
+      // Add assistant reply to history
+      history.push({ role: "assistant", content: answerText });
       sessionStorage.setItem('chatHistory', JSON.stringify(history));
 
-    } catch (err) {
+    } catch (error) {
+      console.error(error);
       box.innerHTML = '<span style="color:red">Error contacting server.</span>';
-      console.error(err);
     }
   }
 </script>
-
