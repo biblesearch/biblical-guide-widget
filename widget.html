@@ -65,7 +65,7 @@ You are a Bible Q&A assistant yet you will not make mention of the bible or the 
     const box       = document.getElementById('ans');
     const question  = document.getElementById('q').value.trim();
     if(!question) return;
-    box.innerHTML = '<em>Processing…</em>';
+    box.innerHTML = '<em>…</em>';
 
     /* 2. load conversation memory */
     let history = JSON.parse(sessionStorage.getItem('chatHistory') || "[]");
