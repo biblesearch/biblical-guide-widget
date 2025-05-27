@@ -2,41 +2,41 @@
 <meta charset="utf-8">
 <title>Bible Q&A Widget</title>
 <style>
-  body {
-    margin: 0;
-    font: 16px Georgia, serif;
-    text-align: center;
-    padding-top: 30px;
+  body{
+    margin:0;
+    font:16px Georgia,serif;
+    text-align:center;
+    padding-top:30px;
   }
-  #form-container {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+  #form-container{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
   }
-  #q {
-    padding: 12px 16px;
-    width: 400px;
-    max-width: 80%;
-    font: 16px Georgia, serif;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+  #q{
+    padding:12px 16px;
+    width:400px;
+    max-width:80%;
+    font:16px Georgia,serif;
+    border:1px solid #ccc;
+    border-radius:6px;
   }
-  button {
-    padding: 12px 20px;
-    font: 16px Georgia, serif;
-    background-color: #000;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+  button{
+    padding:12px 20px;
+    font:16px Georgia,serif;
+    background:#000;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
   }
-  #ans {
-    max-width: 800px;
-    margin: 40px auto 0;
-    font: 17px Georgia, serif;
-    line-height: 1.6;
-    text-align: left;
+  #ans{
+    max-width:800px;
+    margin:40px auto 0;
+    font:17px Georgia,serif;
+    line-height:1.6;
+    text-align:left;
   }
 </style>
 
@@ -47,49 +47,62 @@
 <div id="ans"></div>
 
 <script>
-  const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe"; // <-- Use your actual Make URL
+  /* ------------ 1. fixed rules sent on every turn ------------ */
+  const systemPrompt = {
+    role: "system",
+    content: `
+You are a Bible Q&A assistant.
+• Base every answer **only** on the Bible and the Old Testament.
+• First give exactly ONE bold-italic summary paragraph, then list the supporting Bible verses, one per line in normal font.
+• If the question is about politics, celebrities, or any topic outside Scripture, politely steer the user back to biblical principles without personal opinions.
+• Do not mention that you are an AI or give developer disclaimers.`
+  };
+  /* ----------------------------------------------------------- */
 
-  async function askBible() {
-    const box = document.getElementById('ans');
-    const question = document.getElementById('q').value.trim();
-    if (!question) return;
+  const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
 
+  async function askBible(){
+    const box       = document.getElementById('ans');
+    const question  = document.getElementById('q').value.trim();
+    if(!question) return;
     box.innerHTML = '<em>Processing…</em>';
 
-    // Load conversation history from session
-    let history = sessionStorage.getItem('chatHistory');
-    history = history ? JSON.parse(history) : [];
+    /* 2. load conversation memory */
+    let history = JSON.parse(sessionStorage.getItem('chatHistory') || "[]");
 
-    // Add user's question to history
-    history.push({ role: "user", content: question });
+    /* 3. ensure first entry is always the system prompt */
+    if(!history.length || history[0].role!=="system"){
+      history.unshift(systemPrompt);
+    }
 
-    try {
-      const response = await fetch(endpointURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history })
+    /* 4. add current user turn */
+    history.push({role:"user", content:question});
+
+    try{
+      const r = await fetch(endpointURL,{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ history })
       });
+      if(!r.ok) throw new Error("Server error");
 
-      if (!response.ok) throw new Error("Server error");
+      const answerText = await r.text();
 
-      const answerText = await response.text();
-
-      // Split into summary and verses
-      const [summary, ...verses] = answerText.split(/\n|<br\s*\/?>/).filter(Boolean);
+      /* 5. split answer into summary + verses for nice display */
+      const [summary,...verses] = answerText
+            .split(/\n|<br\s*\/?>/).filter(Boolean);
 
       box.innerHTML = `
-        <p style="font-style: italic; font-weight: bold;">${summary.trim()}</p>
-        ${verses.map(v =>
-          `<p style="margin: 4px 0;">${v.trim()}</p>`
-        ).join('')}
+        <p style="font-style:italic;font-weight:bold;">${summary.trim()}</p>
+        ${verses.map(v=>`<p style="margin:4px 0;">${v.trim()}</p>`).join('')}
       `;
 
-      // Add assistant reply to history
-      history.push({ role: "assistant", content: answerText });
+      /* 6. save assistant reply */
+      history.push({role:"assistant", content:answerText});
       sessionStorage.setItem('chatHistory', JSON.stringify(history));
 
-    } catch (error) {
-      console.error(error);
+    }catch(err){
+      console.error(err);
       box.innerHTML = '<span style="color:red">Error contacting server.</span>';
     }
   }
