@@ -114,8 +114,8 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
       history.push({role:"assistant", content:answerText});
       sessionStorage.setItem('chatHistory', JSON.stringify(history));
 
-      // 🆕 Notify parent page to resize the iframe
-      sendHeight();
+      // NEW: trigger resize after answer renders
+      delayedResize();
 
     }catch(err){
       console.error(err);
@@ -123,13 +123,20 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
     }
   }
 
-  // 🆕 Resize logic (added at the end)
+  // NEW: dynamic resizing code for iframe
   function sendHeight() {
     const height = document.body.scrollHeight;
     parent.postMessage({ type: "resize", height }, "*");
   }
 
-  window.onload = sendHeight;
-  new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
+  function delayedResize() {
+    setTimeout(sendHeight, 100);
+  }
+
+  window.onload = delayedResize;
+  new MutationObserver(delayedResize).observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 </script>
 
