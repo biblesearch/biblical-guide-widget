@@ -114,9 +114,22 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
       history.push({role:"assistant", content:answerText});
       sessionStorage.setItem('chatHistory', JSON.stringify(history));
 
+      // 🆕 Notify parent page to resize the iframe
+      sendHeight();
+
     }catch(err){
       console.error(err);
       box.innerHTML = '<span style="color:red">Error contacting server.</span>';
     }
   }
+
+  // 🆕 Resize logic (added at the end)
+  function sendHeight() {
+    const height = document.body.scrollHeight;
+    parent.postMessage({ type: "resize", height }, "*");
+  }
+
+  window.onload = sendHeight;
+  new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
 </script>
+
