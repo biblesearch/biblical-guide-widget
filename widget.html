@@ -1,69 +1,84 @@
 <!doctype html>
-<meta charset="utf-8">
-<title>Bible Q&A Widget</title>
-<style>
-  html, body {
-    margin: 0;
-    padding: 16px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    max-width: 100%;
-    box-sizing: border-box;
-    font-family: Georgia, serif;
-    background: #fff;
-  }
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bible Q&A Widget</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 16px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      max-width: 100%;
+      box-sizing: border-box;
+      font-family: Georgia, serif;
+      background: #fff;
+    }
 
-  body {
-    text-align: center;
-    padding-top: 30px;
-  }
+    body {
+      text-align: center;
+      padding-top: 30px;
+    }
 
-  #form-container {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
+    #form-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-  #q {
-    padding: 12px 16px;
-    width: 400px;
-    max-width: 80%;
-    font: 16px Georgia, serif;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-  }
+    #q {
+      padding: 12px 16px;
+      width: 400px;
+      max-width: 80%;
+      font: 16px Georgia, serif;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      display: block;
+    }
 
-  button {
-    padding: 12px 20px;
-    font: 16px Georgia, serif;
-    background: #000;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
+    button {
+      padding: 12px 20px;
+      font: 16px Georgia, serif;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-  #ans {
-    max-width: 800px;
-    margin: 40px auto 0;
-    font: 17px Georgia, serif;
-    line-height: 1.6;
-    text-align: left;
-    word-wrap: break-word;
-  }
-</style>
+    #ans {
+      max-width: 800px;
+      margin: 40px auto 0;
+      font: 17px Georgia, serif;
+      line-height: 1.6;
+      text-align: left;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
 
-<div id="form-container">
-  <input id="q" placeholder="Ask a question about life, morality, or faith.">
-  <button onclick="askBible()">Ask</button>
-</div>
-<div id="ans"></div>
+  <div id="form-container">
+    <input id="q" placeholder="Ask a question about life, morality, or faith.">
+    <button onclick="askBible()">Ask</button>
+  </div>
 
-<script>
-  const systemPrompt = {
-    role: "system",
-    content: `
+  <div id="ans"></div>
+
+  <script>
+    // Fix input scroll for mobile
+    const inputField = document.getElementById("q");
+    inputField.addEventListener("input", () => {
+      inputField.scrollLeft = inputField.scrollWidth;
+    });
+
+    const systemPrompt = {
+      role: "system",
+      content: `
 You are a Bible-based guide whose purpose is to gently explain the heart of God's Word. Your answers reflect the tone of a wise, calm teacher who cares deeply for those seeking truth.
 
 You do not say that you are an AI or mention developers. You do not give opinions. You speak with empathy, understanding that many questions come from real human pain or longing.
@@ -75,68 +90,69 @@ For every question:
 If the question is about politics, celebrities, or unrelated things, kindly redirect the user back to the eternal truths of God’s Word, without opinions.
 
 Speak not just to the mind, but to the heart. Let your words reflect truth, light, and grace.`
-  };
+    };
 
-  const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
+    const endpointURL = "https://hook.eu2.make.com/1cwdrbnguf3qu8lkluwix02ewmn274fe";
 
-  async function askBible(){
-    const box       = document.getElementById('ans');
-    const question  = document.getElementById('q').value.trim();
-    if(!question) return;
-    box.innerHTML = '<em>…</em>';
+    async function askBible(){
+      const box       = document.getElementById('ans');
+      const question  = document.getElementById('q').value.trim();
+      if(!question) return;
+      box.innerHTML = '<em>…</em>';
 
-    let history = JSON.parse(sessionStorage.getItem('chatHistory') || "[]");
+      let history = JSON.parse(sessionStorage.getItem('chatHistory') || "[]");
 
-    if(!history.length || history[0].role!=="system"){
-      history.unshift(systemPrompt);
+      if(!history.length || history[0].role!=="system"){
+        history.unshift(systemPrompt);
+      }
+
+      history.push({role:"user", content:question});
+
+      try{
+        const r = await fetch(endpointURL,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body:JSON.stringify({ history })
+        });
+        if(!r.ok) throw new Error("Server error");
+
+        const answerText = await r.text();
+
+        const [summary,...verses] = answerText
+              .split(/\n|<br\s*\/?>/).filter(Boolean);
+
+        box.innerHTML = `
+          <p style="font-style:italic;font-weight:bold;">${summary.trim()}</p>
+          ${verses.map(v=>`<p style="margin:4px 0;">${v.trim()}</p>`).join('')}
+        `;
+
+        history.push({role:"assistant", content:answerText});
+        sessionStorage.setItem('chatHistory', JSON.stringify(history));
+
+        // NEW: trigger resize after answer renders
+        delayedResize();
+
+      }catch(err){
+        console.error(err);
+        box.innerHTML = '<span style="color:red">Error contacting server.</span>';
+      }
     }
 
-    history.push({role:"user", content:question});
-
-    try{
-      const r = await fetch(endpointURL,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ history })
-      });
-      if(!r.ok) throw new Error("Server error");
-
-      const answerText = await r.text();
-
-      const [summary,...verses] = answerText
-            .split(/\n|<br\s*\/?>/).filter(Boolean);
-
-      box.innerHTML = `
-        <p style="font-style:italic;font-weight:bold;">${summary.trim()}</p>
-        ${verses.map(v=>`<p style="margin:4px 0;">${v.trim()}</p>`).join('')}
-      `;
-
-      history.push({role:"assistant", content:answerText});
-      sessionStorage.setItem('chatHistory', JSON.stringify(history));
-
-      // NEW: trigger resize after answer renders
-      delayedResize();
-
-    }catch(err){
-      console.error(err);
-      box.innerHTML = '<span style="color:red">Error contacting server.</span>';
+    // NEW: dynamic resizing code for iframe
+    function sendHeight() {
+      const height = document.body.scrollHeight;
+      parent.postMessage({ type: "resize", height }, "*");
     }
-  }
 
-  // NEW: dynamic resizing code for iframe
-  function sendHeight() {
-    const height = document.body.scrollHeight;
-    parent.postMessage({ type: "resize", height }, "*");
-  }
+    function delayedResize() {
+      setTimeout(sendHeight, 100);
+    }
 
-  function delayedResize() {
-    setTimeout(sendHeight, 100);
-  }
-
-  window.onload = delayedResize;
-  new MutationObserver(delayedResize).observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-</script>
-
+    window.onload = delayedResize;
+    new MutationObserver(delayedResize).observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  </script>
+</body>
+</html>
