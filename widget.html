@@ -21,23 +21,24 @@
     }
 
     #form-container {
-      display: inline-flex;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       gap: 10px;
-      flex-wrap: wrap;
     }
 
-    #q {
+    textarea#q {
       padding: 12px 16px;
-      width: 400px;
-      max-width: 80%;
+      width: 90%;
+      max-width: 600px;
       font: 16px Georgia, serif;
       border: 1px solid #ccc;
       border-radius: 6px;
-      white-space: nowrap;
-      overflow-x: auto;
-      overflow-y: hidden;
-      display: block;
+      min-height: 50px;
+      max-height: 200px;
+      overflow-y: auto;
+      resize: none;
+      box-sizing: border-box;
     }
 
     button {
@@ -63,17 +64,19 @@
 <body>
 
   <div id="form-container">
-    <input id="q" placeholder="Ask a question about life, morality, or faith.">
+    <textarea id="q" placeholder="Ask a question about life, morality, or faith."></textarea>
     <button onclick="askBible()">Ask</button>
   </div>
 
   <div id="ans"></div>
 
   <script>
-    // Fix input scroll for mobile
+    // Auto-resize the textarea as user types
     const inputField = document.getElementById("q");
     inputField.addEventListener("input", () => {
-      inputField.scrollLeft = inputField.scrollWidth;
+      inputField.style.height = "auto";
+      inputField.style.height = inputField.scrollHeight + "px";
+      delayedResize(); // update iframe height
     });
 
     const systemPrompt = {
@@ -96,7 +99,7 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
 
     async function askBible(){
       const box       = document.getElementById('ans');
-      const question  = document.getElementById('q').value.trim();
+      const question  = inputField.value.trim();
       if(!question) return;
       box.innerHTML = '<em>…</em>';
 
@@ -129,7 +132,6 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
         history.push({role:"assistant", content:answerText});
         sessionStorage.setItem('chatHistory', JSON.stringify(history));
 
-        // NEW: trigger resize after answer renders
         delayedResize();
 
       }catch(err){
@@ -138,7 +140,6 @@ Speak not just to the mind, but to the heart. Let your words reflect truth, ligh
       }
     }
 
-    // NEW: dynamic resizing code for iframe
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "resize", height }, "*");
